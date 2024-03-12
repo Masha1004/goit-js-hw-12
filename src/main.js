@@ -23,7 +23,18 @@ const setStylesButton = ({ elem, disabled = false, display }) => {
   elem.disabled = disabled;
 };
 
+const isShowLoadMoreButton = () => {
+  setStylesButton({ elem: loadMoreButton, display: 'none' });
+
+  getErrorMessage(
+    "We're sorry, but you've reached the end of search results.",
+    'green'
+  );
+};
+
 let page = 1;
+let value;
+const isLoadMoreButton = loadMoreButton.style.display === 'block';
 
 const searchImages = async ({ value, page = 1 }) => {
   setStylesLoader('block');
@@ -47,26 +58,38 @@ const searchImages = async ({ value, page = 1 }) => {
   } else {
     getErrorMessage('Something went wrong. Please try again', 'red');
   }
+
+  return result;
 };
 
 searchForm.addEventListener('submit', async evt => {
   evt.preventDefault();
-  const value = evt.currentTarget.elements['js-input'].value;
+  value = evt.currentTarget.elements['js-input'].value;
 
   if (value) {
     gallery.innerHTML = '';
 
-    if (loadMoreButton.style.display === 'block') {
+    if (isLoadMoreButton) {
       setStylesButton({ elem: loadMoreButton, display: 'none' });
     }
-    await searchImages({ value });
-    setStylesButton({ elem: loadMoreButton, display: 'block' });
+
+    const result = await searchImages({ value });
+
+    if (result.data.hits.length < 15) {
+      isShowLoadMoreButton();
+    } else {
+      setStylesButton({ elem: loadMoreButton, display: 'block' });
+    }
   }
 
   searchForm.reset();
 });
 
-loadMoreButton.addEventListener('click', () => {
+loadMoreButton.addEventListener('click', async () => {
   page++;
-  searchImages({ page });
+  const result = await searchImages({ value, page });
+
+  if (result.data.hits.length < 15) {
+    isShowLoadMoreButton();
+  }
 });
